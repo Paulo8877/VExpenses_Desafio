@@ -239,3 +239,354 @@ output "ec2_public_ip" {
   - A chave privada pode ser acessada por terceiros.
   - A chave publica é exposta aos usuarios. 
   - O script `user_data` não instala e configura serviços essenciais, como o Nginx.
+
+# Melhorias a Serem Feitas no Terraform
+
+## Melhoria do Provedor AWS
+
+```hcl
+terraform {
+  required_version = ">= 1.11.1"
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+```
+**Comentário:**
+- Para evitar problemas de atualizações do próprio Terraform, busquei a versão mais recente dele na plataforma da HashiCorp.
+
+---
+
+## Melhoria das Variáveis
+
+```hcl
+variable "projeto" {
+  description = "Nome do projeto"
+  type        = string
+  default     = "VExpenses"
+}
+
+variable "candidato" {
+  description = "Nome do candidato"
+  type        = string
+  default     = "Seu Nome"
+}
+```
+
+**Comentário:**
+- Sem mudanças aqui.
+
+---
+
+## Melhoria das chaves SSH
+
+```hcl
+resource "aws_key_pair" "ec2_key_pair" {
+  key_name   = "${var.projeto}-${var.candidato}-key"
+  public_key = tls_private_key.ec2_key.public_key_openssh
+}
+
+resource "local_file" "private_key_pem" {
+  filename         = "./${var.projeto}-${var.candidato}-key.pem"
+  content          = tls_private_key.ec2_key.private_key_pem
+  file_permission  = "0600"
+}
+```
+
+**Comentário:**
+- Aqui temos a criação de um arquivo local para armazenar a chave privada, definindo também permissões de acesso apenas para pessoas que possuem permissão local de administrador definido pelo “0600”.
+
+---
+
+## Melhoria da VPC
+
+```hcl
+variable "cidr_block" {
+  description = "CIDR block for the VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "enable_dns_support" {
+  description = "Enable DNS support for the VPC"
+  type        = bool
+  default     = true
+}
+
+variable "enable_dns_hostnames" {
+  description = "Enable DNS hostnames for the VPC"
+  type        = bool
+  default     = true
+}
+
+resource "aws_vpc" "main_vpc" {
+  cidr_block           = var.cidr_block
+  enable_dns_support   = var.enable_dns_support
+  enable_dns_hostnames = var.enable_dns_hostnames
+
+  tags = {
+    Name = "${var.projeto}-${var.candidato}-vpc"
+  }
+}
+```
+
+**Comentário:**
+- Criação de uma variável para “cidr_block” que pode permitir usos futuros no código. 
+- O parâmetro “enable_dns_hostnanes” agora é controlado por variável, permitindo a personalização da resolução do DNS. 
+- Essa configuração personalizada do DNS permite a empresa ajustar o código conforme as necessidades do ambiente empresarial ou requisitos de segurança. 
+
+---
+
+## Melhoria da Subnet
+
+```hcl
+variable "cidr_block_subnet" {
+  description = "CIDR block for the subnet"
+  type        = string
+  default     = "10.0.1.0/24"
+}
+
+variable "availability_zone" {
+  description = "Availability zone for the subnet"
+  type        = string
+  default     = "us-east-1a"
+}
+
+data "aws_availability_zones" "available" {}
+
+resource "aws_subnet" "main_subnet" {
+  vpc_id            = aws_vpc.main_vpc.id
+  cidr_block        = var.cidr_block_subnet
+  availability_zone = var.availability_zone != "" ? var.availability_zone : data.aws_availability_zones.available.names[0]
+
+  tags = {
+    Name = "${var.projeto}-${var.candidato}-subnet"
+  }
+}
+```
+
+**Comentário:**
+- Criacao da variável “cidr_block_subnet” para garantir uma maior flexibilidade e grau de adaptação as necessidades da empresa. 
+- A zona de disponibilidade (caso não haja) vai ser redirecionada para primeira zona AWS disponível na região, garantindo o funcionamento em caso de falhas da AWS. 
+- Esse código torna a criação da subnet mais flexível, podendo ser adaptada para os diferentes níveis estruturais da empresa. 
+
+---
+
+## Melhoria do Gateway 
+
+```hcl
+resource "aws_internet_gateway" "main_igw" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  tags = {
+    Name = "${var.projeto}-${var.candidato}-igw"
+  }
+}
+
+resource "aws_route_table" "main_route_table" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main_igw.id
+  }
+
+  tags = {
+    Name = "${var.projeto}-${var.candidato}-route_table"
+  }
+}
+
+resource "aws_route_table" "private_route_table" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  tags = {
+    Name = "${var.projeto}-${var.candidato}-private_route_table"
+  }
+}
+
+resource "aws_route_table_association" "private_association" {
+  subnet_id      = aws_subnet.private_subnet.id
+  route_table_id = aws_route_table.private_route_table.id
+
+  tags = {
+    Name = "${var.projeto}-${var.candidato}-private_association"
+  }
+}
+
+resource "aws_nat_gateway" "main_nat_gateway" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public_subnet.id
+
+  tags = {
+    Name = "${var.projeto}-${var.candidato}-nat_gateway"
+  }
+}
+
+resource "aws_eip" "nat_eip" {
+  vpc = true
+
+  tags = {
+    Name = "${var.projeto}-${var.candidato}-eip"
+  }
+}
+```
+
+**Comentário:**
+- As instâncias privadas foram configuradas em sub-redes que não têm acesso direto à internet. Isso melhora a segurança da infraestrutura, uma vez que reduz os possíveis ataques. 
+- A tabela de rotas da sub-rede privada não contém rota para `0.0.0.0/0`, evitando exposição externa (que foi o principal erro identificado). 
+- Para as instâncias privadas que necessitam de acesso à internet, como para atualizações de pacotes, foi configurado um NAT Gateway. Este gateway oferece saída para a internet sem expor as instâncias diretamente.
+- Criação da regra de entrada SSH, configurada para permitir acesso de qualquer lugar (`0.0.0.0/0`), mas como eu não tenho acesso aos IPs da empresa, recomendo a adaptar essa parte aos IPs internos da empresa. 
+- Criação das regras de saída, que permite todo tráfego de saída da VPC. Dependendo das necessidades, você pode querer restringir isso para casos específicos, como permitir apenas o tráfego de saída para o NAT Gateway ou outros recursos de rede, isso novamente vai de acordo com a empresa. 
+- Embora a configuração de SSH esteja aberta para qualquer origem, em organizações é altamente recomendável restringir o acesso SSH apenas para endereços IPs confiáveis. 
+- A tabela de rotas privada não tem acesso direto à internet, garantindo que apenas instâncias necessárias sejam expostas à internet.
+
+---
+
+## Melhoria nas Rotas das Tabelas Associadas
+
+```hcl
+resource "aws_route_table_association" "main_association" {
+  subnet_id      = aws_subnet.main_subnet.id
+  route_table_id = aws_route_table.main_route_table.id
+
+  tags = {
+    Name        = "${var.projeto}-${var.candidato}-route_table_association"
+    Environment = "production"
+    Purpose     = "public"
+  }
+}
+
+resource "aws_route_table" "private_route_table" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.main_nat.id
+  }
+
+  tags = {
+    Name        = "${var.projeto}-${var.candidato}-private_route_table"
+    Environment = "production"
+    Purpose     = "private"
+  }
+}
+```
+
+**Comentário:**
+- A melhoria da associação da tabela de rotas à sub-rede garante que instancias nessa sub-rede tenham acesso à internet ou outras redes de forma adequada.
+- A inclusão das tags “environment” e “purpose” ajuda a organizar os recursos de maneira mais eficiente, principalmente no ambiente da organização que lida com múltiplos recursos e diferentes finalidades entre eles. 
+- A rota para 0.0.0.0/0 é direcionada ao NAT Gateway, permitindo que as instâncias privadas acessem a internet, mas sem serem expostas diretamente a ela, solucionando assim um dos problemas de segurança relacionados a exposição das instancias privadas. 
+- Mudanças nas regras de entrada e saída para permitir apenas o acesso por IPs específicos. Esses IPs devem ser adaptados conforme a necessidade da empresa (foi colocado os IPs gerados anteriormente).
+
+---
+
+## Melhoria do Grupo de Segurança 
+
+```hcl
+resource "aws_security_group" "main_sg" {
+  name        = "${var.projeto}-${var.candidato}-sg"
+  description = "Permitir SSH apenas em ambientes da organização e trafego de saida controlado"
+  vpc_id      = aws_vpc.main_vpc.id
+
+  # Regras de entrada (Ingress)
+ingress {
+  description      = "Allow SSH from a specific IP range"
+  from_port        = 22
+  to_port          = 22
+  protocol         = "tcp"
+  cidr_blocks      = ["10.0.1.0/24"]  
+  ipv6_cidr_blocks = ["::/0"] 
+}
+
+# Regras de saída (Egress)
+egress {
+  description      = "Allow egress to specific internal services"
+  from_port        = 0
+  to_port          = 0
+  protocol         = "-1"
+  cidr_blocks      = ["10.0.0.0/16"]  
+  ipv6_cidr_blocks = ["::/0"]  
+  tags = {
+    Name = "${var.projeto}-${var.candidato}-sg"
+  }
+ }
+}
+```
+
+**Comentário:**
+- Mudanças nas regras de entrada e saída para permitir apenas o acesso por IPs específicos. Esses IPs devem ser adaptados conforme a necessidade da empresa.
+
+---
+
+## Melhoria da AWS AMI Debian 12
+
+```hcl
+resource "aws_instance" "debian_ec2" {
+  ami             = data.aws_ami.debian12.id
+  instance_type   = "t2.micro"
+  subnet_id       = aws_subnet.main_subnet.id
+  key_name        = aws_key_pair.ec2_key_pair.key_name
+  security_groups = [aws_security_group.main_sg.name]
+
+  associate_public_ip_address = true
+
+  root_block_device {
+    volume_size           = 20
+    volume_type           = "gp2"
+    delete_on_termination = true
+  }
+
+  user_data = <<-EOF
+              #!/bin/bash
+              sudo apt-get update -y
+              sudo apt-get upgrade -y
+              EOF
+
+  tags = {
+    Name = "${var.projeto}-${var.candidato}-ec2"
+  }
+}
+```
+
+**Comentário:**
+- Antes o usuário não tinha as permissões corretas por erros na utilização dos comandos Linux. Agora foram adicionadas novas linhas de código que possibilitam a instalação e atualização corretas dos pacotes.
+- Aplicação de Super Usuário aos comandos Linux, que é representado por “sudo”. Isso deve ser capaz de fornecer aos comandos permissão de “root”, podendo realizar qualquer modificação no sistema, incluindo atualizações. 
+
+---
+
+## Melhoria nos Outputs
+
+```hcl
+resource "local_file" "private_key" {
+  filename         = "./${var.projeto}-${var.candidato}-key.pem"
+  content          = tls_private_key.ec2_key.private_key_pem
+  file_permission  = "0600"
+}
+
+output "private_key_file" {
+  description = "Chave privada para acessar a instância EC2"
+  value       = local_file.private_key.filename
+  sensitive   = true
+}
+
+variable "expose_public_ip" {
+  description = "Determina se o IP público da instância será exposto"
+  type        = bool
+  default     = false
+}
+
+output "ec2_public_ip" {
+  description = "Endereço IP público da instância EC2"
+  value       = aws_instance.debian_ec2.public_ip
+  sensitive   = true
+  condition   = var.expose_public_ip
+}
+```
+
+**Comentário:**
+- Criação de um arquivo local para armazenar a chave privada, no qual so vai ter acesso pessoas que possuem permissões locais de administrador definido pelo “0600”. 
+- Criação de uma variável para controlar se o IP publico será exposto ou não. Aqui deve ser adicionado alguma outra logica em caso de exposição. Aqui pode ser adaptado algum sistema de gerenciamento de chaves para esconder ela em caso de exposição indevida.  
+
+---
