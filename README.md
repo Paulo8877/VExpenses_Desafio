@@ -596,3 +596,29 @@ output "ec2_public_ip" {
 - Criação de uma variável para controlar se o IP publico será exposto ou não. Aqui deve ser adicionado alguma outra logica em caso de exposição. Aqui pode ser adaptado algum sistema de gerenciamento de chaves para esconder ela em caso de exposição indevida.  
 
 ---
+
+# Conclusão e Resultados Esperados
+
+O script Terraform elaborado para a criação e configuração da infraestrutura na AWS foi modificado e melhorado com o objetivo de garantir uma rede VPC estruturada de maneira eficiente e segura, com instâncias EC2 devidamente configuradas para atender a requisitos de conectividade, segurança e escalabilidade. A seguir, estão os principais resultados esperados com as melhorias implementadas:
+
+## Criação de VPC e Sub-redes:
+- A infraestrutura agora é configurada com uma VPC customizada, incluindo sub-redes públicas e privadas, proporcionando isolamento e segurança para os recursos dentro da rede.
+- A alocação de blocos CIDR adequados para a VPC e sub-redes garante que a comunicação interna seja eficiente, enquanto a comunicação externa seja controlada por uma gateway de internet (IGW) e um NAT Gateway.
+
+## Controle de Acesso com Grupos de Segurança:
+- A implementação de um grupo de segurança (Security Group) restringe o acesso SSH à instância EC2, permitindo apenas conexões provenientes da sub-rede interna, o que melhora a segurança da aplicação.
+- As regras de egress estão configuradas para permitir tráfego para a rede interna, sem expor desnecessariamente a instância ao tráfego externo.
+
+## Instância EC2 com Nginx:
+- Uma instância EC2 foi provisionada usando a imagem Debian 12, com a instalação automática do servidor web Nginx. O servidor é configurado para iniciar automaticamente, proporcionando uma infraestrutura pronta para servir aplicações web desde o primeiro momento.
+- O processo de provisionamento da instância também inclui o comando de atualização do sistema, garantindo que a máquina esteja com os pacotes mais recentes e seguros.
+
+## Configuração de IP Público e Roteamento:
+- A instância EC2 foi configurada para ter um IP público associado, o que permite o acesso direto à aplicação Nginx através de um navegador web, caso o acesso ao IP público esteja habilitado.
+- O roteamento foi aprimorado para permitir que a instância EC2, que reside em uma sub-rede privada, possa acessar a internet via NAT Gateway. Isso garante que a instância tenha a capacidade de acessar recursos externos de maneira segura, sem expor diretamente o IP da sub-rede privada.
+
+## Execução Automatizada:
+- A configuração de `user_data` garante que todas as ações de instalação e configuração sejam realizadas automaticamente durante a inicialização da instância, sem a necessidade de intervenção manual.
+
+## Considerações Finais:
+Com essas melhorias, a infraestrutura provisionada será segura, escalável e pronta para executar aplicações web de forma eficiente. A VPC isolada e o uso de sub-redes públicas e privadas, juntamente com a instalação automatizada do Nginx, garantem que o sistema atenda a boas práticas de segurança, além de oferecer a flexibilidade necessária para futuras expansões e manutenções.
