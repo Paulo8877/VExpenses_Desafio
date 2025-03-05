@@ -542,6 +542,9 @@ resource "aws_instance" "debian_ec2" {
               #!/bin/bash
               sudo apt-get update -y
               sudo apt-get upgrade -y
+              sudo apt-get install -y nginx
+              sudo systemctl enable nginx
+              sudo systemctl start nginx
               EOF
 
   tags = {
@@ -552,7 +555,10 @@ resource "aws_instance" "debian_ec2" {
 
 **Comentário:**
 - Antes o usuário não tinha as permissões corretas por erros na utilização dos comandos Linux. Agora foram adicionadas novas linhas de código que possibilitam a instalação e atualização corretas dos pacotes.
-- Aplicação de Super Usuário aos comandos Linux, que é representado por “sudo”. Isso deve ser capaz de fornecer aos comandos permissão de “root”, podendo realizar qualquer modificação no sistema, incluindo atualizações. 
+- Aplicação de Super Usuário aos comandos Linux, que é representado por “sudo”. Isso deve ser capaz de fornecer aos comandos permissão de “root”, podendo realizar qualquer modificação no sistema, incluindo atualizações.
+- sudo apt-get install -y nginx: Instala o Nginx.
+- sudo systemctl enable nginx: Habilita o Nginx para iniciar automaticamente com o sistema.
+- sudo systemctl start nginx: Inicia o serviço do Nginx.
 
 ---
 
