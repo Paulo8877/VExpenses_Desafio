@@ -621,4 +621,4 @@ O script Terraform elaborado para a criação e configuração da infraestrutura
 - A configuração de `user_data` garante que todas as ações de instalação e configuração sejam realizadas automaticamente durante a inicialização da instância, sem a necessidade de intervenção manual.
 
 # Considerações Finais:
-Com essas melhorias, a infraestrutura provisionada será segura, escalável e pronta para executar aplicações web de forma eficiente.Agradeço imensamente pela oportunidade de trabalhar neste desafio. Com toda a certeza, este projeto formentou em mim uma motivação para aprofundar meus conhecimentos em Terraform, em estruturas da AWS e em redes para o cumprimento deste, e de futuros desafios. 
+Agradeço imensamente pela oportunidade de trabalhar neste desafio. Com toda a certeza, este projeto formentou em mim uma motivação para aprofundar meus conhecimentos em Terraform, em estruturas da AWS e em redes para o cumprimento deste, e de futuros desafios. 
