@@ -1,4 +1,4 @@
-# README - Infraestrutura AWS com Terraform
+# README - Desafio Prático da VExpenses
 
 ## Resumo do Código
 
