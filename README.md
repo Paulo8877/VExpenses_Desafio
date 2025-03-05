@@ -599,10 +599,10 @@ output "ec2_public_ip" {
 
 # Conclusão e Resultados Esperados
 
-O script Terraform elaborado para a criação e configuração da infraestrutura na AWS foi modificado e melhorado com o objetivo de garantir uma rede VPC estruturada de maneira eficiente e segura, com instâncias EC2 devidamente configuradas para atender a requisitos de conectividade, segurança e escalabilidade. A seguir, estão os principais resultados esperados com as melhorias implementadas:
+O script Terraform elaborado para a criação e configuração da infraestrutura na AWS foi modificado e melhorado com o objetivo de garantir o correto funcionamento do codigo em execução, as melhorias foram realizadas visando corrigir erros nos recursos de VPC, Subnet, Grupo de Segurança, Key Pair e da instância EC2.
 
 ## Criação de VPC e Sub-redes:
-- A infraestrutura agora é configurada com uma VPC customizada, incluindo sub-redes públicas e privadas, proporcionando isolamento e segurança para os recursos dentro da rede.
+- A infraestrutura agora é configurada com uma VPC customizada, incluindo sub-redes públicas e privadas, podendo se adaptar aos reais recursos de rede a serem utilizados. 
 - A alocação de blocos CIDR adequados para a VPC e sub-redes garante que a comunicação interna seja eficiente, enquanto a comunicação externa seja controlada por uma gateway de internet (IGW) e um NAT Gateway.
 
 ## Controle de Acesso com Grupos de Segurança:
@@ -621,4 +621,4 @@ O script Terraform elaborado para a criação e configuração da infraestrutura
 - A configuração de `user_data` garante que todas as ações de instalação e configuração sejam realizadas automaticamente durante a inicialização da instância, sem a necessidade de intervenção manual.
 
 ## Considerações Finais:
-Com essas melhorias, a infraestrutura provisionada será segura, escalável e pronta para executar aplicações web de forma eficiente. A VPC isolada e o uso de sub-redes públicas e privadas, juntamente com a instalação automatizada do Nginx, garantem que o sistema atenda a boas práticas de segurança, além de oferecer a flexibilidade necessária para futuras expansões e manutenções.
+Com essas melhorias, a infraestrutura provisionada será segura, escalável e pronta para executar aplicações web de forma eficiente.Agradeço imensamente pela oportunidade de trabalhar neste desafio. Com toda a certeza, este projeto formentou em mim uma motivação para aprofundar meus conhecimentos em Terraform, em estruturas da AWS e em redes para o cumprimento deste, e de futuros desafios. 
