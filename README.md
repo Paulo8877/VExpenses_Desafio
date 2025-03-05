@@ -14,7 +14,7 @@ provider "aws" {
 }
 ```
 **Comentário:**
-Define a região onde os recursos serão provisionados.
+Define a região onde os recursos serão provisionados pelo servidor AWS. 
 
 ---
 
@@ -53,6 +53,8 @@ resource "aws_key_pair" "ec2_key_pair" {
 ```
 **Comentário:**
 - Gera um par de chaves SSH para autenticação segura na AWS.
+- A chabe privada é do tipo RSA, que usa duas chaves para criptografar e descriptografar mensagens.
+- Criação de uma chave publica associada a chave privada. 
 
 ---
 
@@ -70,6 +72,20 @@ resource "aws_vpc" "main_vpc" {
 - Cria uma VPC com a faixa de IP `10.0.0.0/16`.
 
 ### Definição da Subnet Pública
+```resource "aws_subnet" "main_subnet" {
+  vpc_id            = aws_vpc.main_vpc.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "us-east-1a"
+
+  tags = {
+    Name = "${var.projeto}-${var.candidato}-subnet"
+  }
+}
+```
+**Comentário:**
+- Cria uma subnet publica dentro da VPC com faixa de ip de “10.0.1.0/24”.
+
+### Definição do Gateway na AWS
 ```hcl
 resource "aws_internet_gateway" "main_igw" {
   vpc_id = aws_vpc.main_vpc.id
@@ -90,7 +106,8 @@ resource "aws_route_table" "main_route_table" {
 }
 ```
 **Comentário:**
-- Permite tráfego externo para a rede configurada.
+- Permite tráfego externo para a rede configurada de forma segura.
+- Existe uma falha de segurança aqui.
 
 ### Associação da Tabela de Rotas
 ```hcl
@@ -191,6 +208,7 @@ resource "aws_instance" "debian_ec2" {
 ```
 **Comentário:**
 - Cria a instância EC2 baseada na AMI do Debian 12.
+- Define recursos de armazenamento e processamento para maquina virtual. 
 - O script `user_data` apenas atualiza o sistema, mas não instala ou configura serviços como o Nginx.
 
 ---
@@ -211,6 +229,7 @@ output "ec2_public_ip" {
 ```
 **Comentário:**
 - O output expõe a chave privada, o que pode comprometer a segurança.
+- Também expõe a chave pública. 
 
 ---
 
